@@ -1,0 +1,36 @@
+/ {
+	pwmleds: pwmleds {
+		compatible = "pwm-leds";
+		status = "okay";
+
+		green_pwm_led: green_pwm_led {
+			pwms = <&pwm2 1 PWM_MSEC(20) PWM_POLARITY_NORMAL>;
+		};
+
+		red_pwm_led_1: red_pwm_led_1 {
+			pwms = <&pwm3 1 PWM_MSEC(20) PWM_POLARITY_NORMAL>;
+		};
+
+		red_pwm_led_2: red_pwm_led_2 {
+			pwms = <&pwm3 2 PWM_MSEC(20) PWM_POLARITY_NORMAL>;
+		};
+	};
+
+	aliases {
+		pwm-led0 = &green_pwm_led;
+		pwm-led1 = &red_pwm_led_1;
+		pwm-led2 = &red_pwm_led_2;
+	};
+};
+
+&pwm2 {
+	status = "okay";
+	pinctrl-0 = <&tim2_ch1_pa5>; /* 关键：复用PA5为TIM2_CH1 */
+    	pinctrl-names = "default";
+};
+
+&pwm3 {
+	status = "okay";
+	pinctrl-0 = <&tim3_ch1_pa6 &tim3_ch2_pa7>;
+	pinctrl-names = "default";
+};
