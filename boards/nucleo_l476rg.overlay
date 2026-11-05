@@ -16,10 +16,20 @@
 		};
 	};
 
+	buttons: buttons {
+		compatible = "gpio-keys";
+		status = "okay";
+
+		button0: button0 {
+			gpios = <&gpioc 13 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
+		};
+	};
+
 	aliases {
 		pwm-led0 = &green_pwm_led;
 		pwm-led1 = &red_pwm_led_1;
 		pwm-led2 = &red_pwm_led_2;
+		user-button = &button0;
 	};
 };
 

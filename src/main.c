@@ -23,12 +23,19 @@
 static const struct pwm_dt_spec led = PWM_DT_SPEC_GET(DT_ALIAS(pwm_led0));
 static const struct pwm_dt_spec led1 = PWM_DT_SPEC_GET(DT_ALIAS(pwm_led1));
 static const struct pwm_dt_spec led2 = PWM_DT_SPEC_GET(DT_ALIAS(pwm_led2));
+static const struct gpio_dt_spec button0 = GPIO_DT_SPEC_GET(DT_ALIAS(user_button), gpios);
+
+static struct gpio_callback button_cb_data;
+
+bool button_int_sig = false;
 
 #define CARRIER_PERIOD_NS   PWM_HZ(960) 
 
 void set_pwm0(int brightness);
 void set_pwm1(int brightness);
 void set_pwm2(int brightness);
+void button_callback_function(const struct device *port, struct gpio_callback *cb, gpio_port_pins_t pins);
+void button_tasks();
 
 int main(void)
 {
@@ -38,8 +45,12 @@ int main(void)
 	int i = 0;
 	int timestep = SLEEP_TIME_US / 255;
 	bool polar = false;
+	gpio_pin_configure_dt(&button0, GPIO_INPUT);
+	gpio_pin_interrupt_configure_dt(&button0, GPIO_INT_EDGE_TO_ACTIVE);
+	gpio_init_callback(&button_cb_data, button_callback_function, BIT(button0.pin));
+	gpio_add_callback(button0.port, &button_cb_data);
 	while (1) {
-		if(i >= 2550) {
+		if(i >= 1530) {
 			i = 0;
 		}
 		i++;
@@ -64,9 +75,21 @@ int main(void)
 		set_pwm0(brightness0);
 		set_pwm1(brightness1);
 		set_pwm2(brightness2);
+		button_tasks();
 		k_usleep(timestep);
 	}
 	return 0;
+}
+
+void button_callback_function(const struct device *port, struct gpio_callback *cb, gpio_port_pins_t pins) {
+	button_int_sig = true;
+}
+
+void button_tasks() {
+	if(button_int_sig) {
+		printf("pressed!\n");
+		button_int_sig = false;
+	}
 }
 
 void set_pwm0(int brightness) {
