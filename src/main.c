@@ -87,7 +87,8 @@ void button_callback_function(const struct device *port, struct gpio_callback *c
 
 void button_tasks() {
 	if(button_int_sig) {
-		printf("pressed!\n");
+		if(gpio_pin_get_dt(&button0))
+			printf("pressed!\n");
 		button_int_sig = false;
 	}
 }
