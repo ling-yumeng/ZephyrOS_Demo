@@ -37,6 +37,8 @@ void set_pwm2(int brightness);
 void button_callback_function(const struct device *port, struct gpio_callback *cb, gpio_port_pins_t pins);
 void button_tasks();
 
+bool light_off = false;
+
 int main(void)
 {
 	int brightness0 = 255;
@@ -44,11 +46,11 @@ int main(void)
 	int brightness2 = 255;
 	int i = 0;
 	int timestep = SLEEP_TIME_US / 255;
-	bool polar = false;
 	gpio_pin_configure_dt(&button0, GPIO_INPUT);
 	gpio_pin_interrupt_configure_dt(&button0, GPIO_INT_EDGE_TO_ACTIVE);
 	gpio_init_callback(&button_cb_data, button_callback_function, BIT(button0.pin));
 	gpio_add_callback(button0.port, &button_cb_data);
+	printf("Light: %s.\n", light_off ? "OFF" : "ON");
 	while (1) {
 		if(i >= 1530) {
 			i = 0;
@@ -72,9 +74,16 @@ int main(void)
 		else if(i<1530) {
 			brightness2 = i-1275;
 		}
-		set_pwm0(brightness0);
-		set_pwm1(brightness1);
-		set_pwm2(brightness2);
+		if(light_off) {
+			set_pwm0(0);
+			set_pwm1(0);
+			set_pwm2(0);
+		}
+		else {
+			set_pwm0(brightness0);
+			set_pwm1(brightness1);
+			set_pwm2(brightness2);
+		}
 		button_tasks();
 		k_usleep(timestep);
 	}
@@ -87,9 +96,12 @@ void button_callback_function(const struct device *port, struct gpio_callback *c
 
 void button_tasks() {
 	if(button_int_sig) {
-		if(gpio_pin_get_dt(&button0))
+		if(gpio_pin_get_dt(&button0)) {
 			printf("pressed!\n");
-		button_int_sig = false;
+			button_int_sig = false;
+			light_off = !light_off;
+			printf("Light: %s.\n", light_off ? "OFF" : "ON");
+		}
 	}
 }
 
