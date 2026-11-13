@@ -56,27 +56,21 @@ int main(void)
 	gpio_add_callback(button0.port, &button_cb_data);
 	printf("Light: %s.\n", light_off ? "OFF" : "ON");
 	while (1) {
-		if(i >= 1530) {
+		if(i >= 765) {
 			i = 0;
 		}
 		i++;
 		if(i<255) {
+			brightness2 = i;
 			brightness0 = 255-i;
 		}
 		else if(i<510) {
 			brightness0 = i-255;
+			brightness1 = 510-i;
 		}
 		else if(i<765) {
-			brightness1 = 765-i;
-		}
-		else if(i<1020) {
-			brightness1 = i-765;
-		}
-		else if(i<1275) {
-			brightness2 = 1275-i;
-		}
-		else if(i<1530) {
-			brightness2 = i-1275;
+			brightness1 = i-510;
+			brightness2 = 765-i;
 		}
 		if(light_off) {
 			set_pwm0(0);
