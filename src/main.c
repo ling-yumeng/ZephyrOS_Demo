@@ -9,8 +9,8 @@
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/pwm.h>
 #include <zephyr/device.h>
+#include "tempsensor.h"
 
-/* 1000 msec = 1 sec */
 #define SLEEP_TIME_US   300000
 
 /* The devicetree node identifier for the "led0" alias. */
@@ -24,6 +24,7 @@ static const struct pwm_dt_spec led = PWM_DT_SPEC_GET(DT_ALIAS(pwm_led0));
 static const struct pwm_dt_spec led1 = PWM_DT_SPEC_GET(DT_ALIAS(pwm_led1));
 static const struct pwm_dt_spec led2 = PWM_DT_SPEC_GET(DT_ALIAS(pwm_led2));
 static const struct gpio_dt_spec button0 = GPIO_DT_SPEC_GET(DT_ALIAS(user_button), gpios);
+static const struct device *i2c_main_bus = DEVICE_DT_GET(DT_ALIAS(tempsensor_i2c));
 
 static struct gpio_callback button_cb_data;
 
@@ -36,11 +37,14 @@ void set_pwm1(int brightness);
 void set_pwm2(int brightness);
 void button_callback_function(const struct device *port, struct gpio_callback *cb, gpio_port_pins_t pins);
 void button_tasks();
+void tempsensor_callback(float temperature);
 
 bool light_off = false;
+tempsensor__job_queue tempsensor__job_queue_0;
 
 int main(void)
 {
+	tempsensor__job_queue_0=tempsensor__construct_job_queue();
 	int brightness0 = 255;
 	int brightness1 = 255;
 	int brightness2 = 255;
@@ -85,6 +89,7 @@ int main(void)
 			set_pwm2(brightness2);
 		}
 		button_tasks();
+		tempsensor__do_continue(i2c_main_bus, &tempsensor__job_queue_0);
 		k_usleep(timestep);
 	}
 	return 0;
@@ -94,6 +99,10 @@ void button_callback_function(const struct device *port, struct gpio_callback *c
 	button_int_sig = true;
 }
 
+void tempsensor_callback(float temperature) {
+	printf("Tempsensor: %d C\n", (int)temperature);
+}
+
 void button_tasks() {
 	if(button_int_sig) {
 		if(gpio_pin_get_dt(&button0)) {
@@ -101,6 +110,9 @@ void button_tasks() {
 			button_int_sig = false;
 			light_off = !light_off;
 			printf("Light: %s.\n", light_off ? "OFF" : "ON");
+
+			//Tempsensor Logic
+			tempsensor__read_temperature(&tempsensor__job_queue_0, tempsensor_callback);
 		}
 	}
 }
