@@ -10,7 +10,7 @@
 
 //这玩意已经成一坨了我说实话
 //这个东西完全依赖满天飞的指针运行
-//我说白了白年之内无人能懂
+//我说白了白年之内无人能懂这个环是怎么跑起来的
 
 void i2c_send_to_tempsensor(const struct device *i2c_bus, const uint8_t *msg, int l) {
     uint8_t addr = 0x4F;
@@ -95,7 +95,6 @@ void tempsensor__do_continue(const struct device *i2c_bus, tempsensor__job_queue
     else {
         switch (*(q->i_beg)) {
             case 0 : {
-                printf("Main loop: Wait for NV.\n");
                 // Wait for NV
                 if(check_nvb(i2c_bus)) {
                     *(q->i_end) = 0;
@@ -114,7 +113,6 @@ void tempsensor__do_continue(const struct device *i2c_bus, tempsensor__job_queue
             }
             case 1 : {
                 // Wait for Convert
-                printf("Main loop: Wait for Convert.\n");
                 if(check_done(i2c_bus)) {
                     arg__wait_convert *this_arg = *(q->a_beg);
                     this_arg->callback(q, this_arg->fp);
@@ -132,7 +130,6 @@ void tempsensor__do_continue(const struct device *i2c_bus, tempsensor__job_queue
             }
             case 2 : {
                 // Access Config
-                printf("Main loop: Access Config.\n");
                 arg__access_config* this_arg = (arg__access_config*)(*(q->a_beg));
                 this_arg->callback(get_config(i2c_bus), q, this_arg->fp);
                 free(this_arg);
@@ -140,7 +137,6 @@ void tempsensor__do_continue(const struct device *i2c_bus, tempsensor__job_queue
             }
             case 3 : {
                 // Get Temperature
-                printf("Main loop: Get Temperature.\n");
                 arg__get_temperature* this_arg = (arg__get_temperature*)(*(q->a_beg));
                 this_arg->callback(get_temperature(i2c_bus));
                 free(this_arg);
@@ -148,7 +144,6 @@ void tempsensor__do_continue(const struct device *i2c_bus, tempsensor__job_queue
             }
             case 4 : {
                 // Set Config
-                printf("Main loop: Set Config.\n");
                 arg__set_config* this_arg = (arg__set_config*)(*(q->a_beg));
                 set_config(i2c_bus, this_arg->cfg);
                 free(this_arg);
@@ -156,7 +151,6 @@ void tempsensor__do_continue(const struct device *i2c_bus, tempsensor__job_queue
             }
             case 5 : {
                 // Start Convert
-                printf("Main loop: Start Convert.\n");
                 start_convert(i2c_bus);
                 break;
             }
@@ -169,7 +163,6 @@ void tempsensor__do_continue(const struct device *i2c_bus, tempsensor__job_queue
 }
 
 void push_job(tempsensor__job_queue *q, char cmd, void* arg) {
-    printf("PUSH: %d\n", cmd);
     *(q->i_end) = cmd;
     q->i_end++;
     q->i_end = ((q->i_end < (q->instruct_ring+16)) ? q->i_end : q->i_end - 16);
@@ -186,40 +179,31 @@ tempsensor__job_queue tempsensor__construct_job_queue() {
 }
 
 void after_convert(tempsensor__job_queue *q, void (*fp)(float a)) {
-    printf("Convert done.\n");
     arg__get_temperature* arg = malloc(sizeof(arg__get_temperature));
     arg->callback = fp;
-    printf("Get Temperature.\n");
     push_job(q, 3, arg);
 }
 
 void after_set_config(tempsensor__job_queue *q, void (*fp)(float a)) {
-    printf("Config setted.\n");
     arg__wait_convert* arg = malloc(sizeof(arg__wait_convert));
     arg->callback = after_convert;
     arg->fp = fp;
-    printf("Start convert and wait\n");
     push_job(q, 5, NULL);
     push_job(q, 1, arg);
 }
 
 void after_ac(uint8_t cfg, tempsensor__job_queue *q, void (*fp)(float a)) {
-    printf("Access config done.\n");
     cfg |= 0x3;
     arg__set_config *arg = malloc(sizeof(arg__set_config));
     arg->cfg = cfg;
     arg__wait_nv *arg1 = malloc(sizeof(arg__wait_nv));
     arg1->callback = after_set_config;
     arg1->fp = fp;
-    printf("Set config and wait for nv.\n");
     push_job(q, 4, (void*)arg);
     push_job(q, 0, (void*)arg1);
 }
 
-
-int active_counter=0;
 void tempsensor__read_temperature(tempsensor__job_queue *q, void (*callback)(float temperature)) {
-    printf("Active Counter: %d\n", active_counter++);
     arg__access_config *arg_ac = malloc(sizeof(arg__access_config));
     arg_ac->callback = after_ac;
     arg_ac->fp = callback;

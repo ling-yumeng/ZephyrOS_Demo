@@ -105,11 +105,15 @@ void tempsensor_callback(float temperature) {
 
 void button_tasks() {
 	if(button_int_sig) {
+		button_int_sig = false;
 		if(gpio_pin_get_dt(&button0)) {
 			printf("pressed!\n");
-			button_int_sig = false;
+
+			//Light ON/OFF
+			/*
 			light_off = !light_off;
 			printf("Light: %s.\n", light_off ? "OFF" : "ON");
+			*/
 
 			//Tempsensor Logic
 			tempsensor__read_temperature(&tempsensor__job_queue_0, tempsensor_callback);
