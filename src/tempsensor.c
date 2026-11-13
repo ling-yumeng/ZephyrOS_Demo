@@ -93,14 +93,11 @@ void tempsensor__do_continue(const struct device *i2c_bus, tempsensor__job_queue
         return;
     }
     else {
-        printf("Main loop: i_beg=%d; a_beg=%d\n", q->i_beg - q->instruct_ring, q->a_beg - q->arguments_ring);
-        printf("           i_end=%d; a_end=%d\n", q->i_end - q->instruct_ring, q->a_end - q->arguments_ring);
         switch (*(q->i_beg)) {
             case 0 : {
                 printf("Main loop: Wait for NV.\n");
                 // Wait for NV
                 if(check_nvb(i2c_bus)) {
-                    printf("PUSH: %d\n", 0);
                     *(q->i_end) = 0;
                     *(q->a_end) = *(q->a_beg);
                     q->i_end += 1;
@@ -120,18 +117,10 @@ void tempsensor__do_continue(const struct device *i2c_bus, tempsensor__job_queue
                 printf("Main loop: Wait for Convert.\n");
                 if(check_done(i2c_bus)) {
                     arg__wait_convert *this_arg = *(q->a_beg);
-                    printk("POP arg=%p beg=%p end=%p fp=%p\n", this_arg, q->a_beg, q->a_end, this_arg->callback);
-                    printk("arguments_ring=%p .. %p\n", q->arguments_ring, q->arguments_ring + 16);
                     this_arg->callback(q, this_arg->fp);
                     free(this_arg);
-                    *(q->a_beg) = NULL;
                 }
                 else {
-                    arg__wait_convert *this_arg = *(q->a_beg);
-                    printk("POP arg=%p beg=%p end=%p fp=%p\n", this_arg, q->a_beg, q->a_end, this_arg->callback);
-                    printk("arguments_ring=%p .. %p\n", q->arguments_ring, q->arguments_ring + 16);
-                    this_arg->callback(q, this_arg->fp);
-                    printf("PUSH: %d\n", 1);
                     *(q->i_end) = 1;
                     *(q->a_end) = *(q->a_beg);
                     q->i_end += 1;
@@ -168,7 +157,6 @@ void tempsensor__do_continue(const struct device *i2c_bus, tempsensor__job_queue
             case 5 : {
                 // Start Convert
                 printf("Main loop: Start Convert.\n");
-                printf("Start Convert: ARG P %p\n", *(q->a_beg));
                 start_convert(i2c_bus);
                 break;
             }
@@ -228,7 +216,10 @@ void after_ac(uint8_t cfg, tempsensor__job_queue *q, void (*fp)(float a)) {
     push_job(q, 0, (void*)arg1);
 }
 
+
+int active_counter=0;
 void tempsensor__read_temperature(tempsensor__job_queue *q, void (*callback)(float temperature)) {
+    printf("Active Counter: %d\n", active_counter++);
     arg__access_config *arg_ac = malloc(sizeof(arg__access_config));
     arg_ac->callback = after_ac;
     arg_ac->fp = callback;
